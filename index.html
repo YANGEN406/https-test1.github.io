@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心理年龄测试 | Mental Age Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#595666',
+                        secondary: '#8A8799',
+                        light: '#F3F2F7',
+                        dark: '#3A3847'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .card-shadow {
+                box-shadow: 0 10px 30px rgba(89, 86, 102, 0.08);
+            }
+            .option-item {
+                transition: all 0.25s ease;
+            }
+            .option-item:hover {
+                @apply bg-primary/10;
+            }
+            .option-item.active {
+                @apply bg-primary text-white;
+            }
+            .fade-in {
+                animation: fadeIn 0.4s ease forwards;
+            }
+            @keyframes fadeIn {
+                from {opacity:0;transform: translateY(12px);}
+                to {opacity:1;transform: translateY(0);}
+            }
+        }
+    </style>
+</head>
+<body class="bg-light text-dark font-sans min-h-screen">
+    <div class="max-w-2xl mx-auto px-5 py-6">
+        <!-- 语言切换栏 -->
+        <div class="flex justify-end mb-4">
+            <select id="langSelect" class="border border-secondary/30 rounded-lg px-3 py-2 bg-white outline-none text-sm" onchange="switchLang()">
+                <option value="zh">简体中文</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+
+        <!-- 首页 -->
+        <div id="page-start" class="fade-in">
+            <div class="bg-white rounded-2xl p-8 card-shadow">
+                <h1 data-i18n="title" class="text-[clamp(1.8rem,5vw,2.6rem)] font-medium text-primary text-center mb-4">心理年龄测试</h1>
+                <p data-i18n="startDesc" class="text-secondary text-center mb-8">通过30道选择题，探索你的内在心智成熟度</p>
+
+                <div class="mb-6">
+                    <label data-i18n="labelRealAge" class="block text-sm mb-2">请输入你的实际年龄</label>
+                    <input id="realAge" type="number" min="10" max="90" placeholder="例如：22"
+                           class="w-full border border-secondary/30 rounded-lg px-4 py-3 outline-none focus:border-primary transition">
+                </div>
+                <button onclick="startTest()" data-i18n="btnStart"
+                        class="w-full bg-primary text-white py-3 rounded-lg hover:bg-dark transition">
+                    开始测试
+                </button>
+                <p data-i18n="tipDisclaimer" class="text-xs text-secondary mt-6 text-center">温馨提示：本测试仅为趣味参考，不能替代专业心理评估</p>
+            </div>
+        </div>
+
+        <!-- 测试题目页 -->
+        <div id="page-questions" class="hidden fade-in">
+            <div class="bg-white rounded-2xl p-6 md:p-8 card-shadow">
+                <div class="flex justify-between items-center mb-6">
+                    <span data-i18n="labelQNo" class="text-sm text-secondary">题目 <span id="currentNo">1</span> / 30</span>
+                    <div class="h-1 w-28 bg-light rounded-full overflow-hidden">
+                        <div id="progressBar" class="h-full bg-primary w-[3.33%] transition-all"></div>
+                    </div>
+                </div>
+                <h2 id="questionTitle" class="text-lg md:text-xl font-medium mb-6"></h2>
+                <div id="optionBox" class="space-y-3"></div>
+                <div class="flex gap-3 mt-8">
+                    <button onclick="prevQuestion()" id="btnPrev" data-i18n="btnPrev"
+                            class="w-1/2 py-3 rounded-lg border border-secondary/40 hover:bg-light transition">上一题</button>
+                    <button onclick="nextQuestion()" data-i18n="btnNext"
+                            class="w-1/2 bg-primary text-white py-3 rounded-lg hover:bg-dark transition">下一题</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果页 -->
+        <div id="page-result" class="hidden fade-in">
+            <div class="bg-white rounded-2xl p-6 md:p-8 card-shadow">
+                <h2 data-i18n="resultHead" class="text-xl font-medium text-primary text-center mb-2">你的测试结果</h2>
+                <div class="text-center my-8">
+                    <div class="inline-block rounded-full bg-primary/10 px-8 py-6">
+                        <p data-i18n="labelMentalAge" class="text-sm text-secondary">心理年龄</p>
+                        <p id="mentalAgeResult" class="text-4xl font-medium text-primary mt-1">--</p>
+                    </div>
+                </div>
+                <div id="diffInfo" class="mb-6 text-center"></div>
+                <div class="border-t border-secondary/20 pt-6">
+                    <h3 data-i18n="analysisHead" class="font-medium mb-3">详细心理解析</h3>
+                    <div id="analysisText" class="text-secondary text-sm leading-relaxed space-y-3"></div>
+                </div>
+                <!-- 分享区域 -->
+                <div class="mt-6 pt-6 border-t border-secondary/20">
+                    <p data-i18n="shareTip" class="text-sm mb-3">分享你的测试结果</p>
+                    <div class="flex gap-2">
+                        <input id="shareLink" readonly class="flex-1 border border-secondary/30 rounded-lg px-3 py-2 text-sm outline-none">
+                        <button onclick="copyShareLink()" data-i18n="btnCopy" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-dark transition text-sm">复制</button>
+                    </div>
+                    <p id="copySuccess" data-i18n="copyOk" class="hidden text-green-600 text-xs mt-2">已复制链接！</p>
+                </div>
+                <button onclick="resetAll()" data-i18n="btnReset" class="w-full mt-8 bg-primary text-white py-3 rounded-lg hover:bg-dark transition">
+                    重新测试
+                </button>
+                <p data-i18n="tipDisclaimer" class="text-xs text-secondary mt-6 text-center">温馨提示：本测试仅为趣味参考，不能替代专业心理评估</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 双语语言包 =====
+        const i18n = {
+            zh: {
+                title: "心理年龄测试",
+                startDesc: "通过30道选择题，探索你的内在心智成熟度",
+                labelRealAge: "请输入你的实际年龄",
+                btnStart: "开始测试",
+                tipDisclaimer: "温馨提示：本测试仅为趣味参考，不能替代专业心理评估",
+                labelQNo: "题目",
+                btnPrev: "上一题",
+                btnNext: "下一题",
+                resultHead: "你的测试结果",
+                labelMentalAge: "心理年龄",
+                analysisHead: "详细心理解析",
+                shareTip: "分享你的测试结果",
+                btnCopy: "复制",
+                copyOk: "已复制链接！",
+                btnReset: "重新测试",
+                alertAge: "请输入10~90之间有效的实际年龄",
+                alertSelectOpt: "请选择一项答案",
+                diffMature: "你的心理年龄比实际年龄 成熟 {n} 岁",
+                diffSame: "你的心理年龄与实际年龄基本持平，差值 {n} 岁",
+                diffYoung: "你的心理年龄比实际年龄 年轻 {n} 岁",
+                anaMature: `
+                    <p>✅ 心智成熟度显著高于同龄人。你拥有很强的情绪稳定性，不容易被冲动、外界评价裹挟。面对变故、冲突、离别，你具备不错的接纳能力，习惯从长远视角看待问题，很少陷入无意义内耗。</p>
+                    <p>✅ 优势：共情力、自控力、边界感都比较出色，做决定更理性，不容易被情绪牵着走。身边人常常觉得你靠谱、值得信赖，愿意向你倾诉烦恼。</p>
+                    <p>⚠️ 需要留意：成熟的外壳有时会让你习惯性压抑自己的脆弱，你总习惯自己扛下压力，很少向别人示弱。可以允许自己偶尔幼稚、放松，不必时时刻刻保持“懂事”。</p>
+                    <p>💡 小建议：不必强迫自己一直理性，保留一部分孩子气，会让你的内心更加柔软平衡。</p>
+                `,
+                anaSame: `
+                    <p>✅ 心智状态和生理年龄匹配度很高，属于非常平衡的状态。你既有对应年纪该有的活力、好奇心，也拥有基础的情绪调节和责任意识。</p>
+                    <p>✅ 优势：可以轻松和不同年龄段的人相处，既能享受生活乐趣，遇到事情也能够稳住自己。不会过度早熟，也不会长期停留在幼稚的思维模式里。</p>
+                    <p>⚠️ 需要留意：情绪波动会比较正常，遇到挫折时依然会焦虑、难过，这不是缺点，是很健康的心理表现。</p>
+                    <p>💡 小建议：可以持续学习情绪复盘，慢慢强化自己的内核稳定度。</p>
+                `,
+                anaYoung: `
+                    <p>✅ 你的内心保留着很强的少年感，好奇心旺盛，对世界充满期待，讨厌沉闷刻板的生活。你很容易感受到快乐，新鲜感、浪漫、有趣的小事就能打动你。</p>
+                    <p>✅ 优势：想象力丰富，感受力强，生活不容易麻木；待人真诚直白，不喜欢复杂的人情算计，相处起来轻松纯粹。</p>
+                    <p>⚠️ 需要留意：面对压力、冲突、长久的责任时，容易产生逃避、委屈、情绪化反应；遇到挫败容易自我怀疑，抗挫能力还有提升空间。</p>
+                    <p>💡 小建议：保留这份珍贵的童心，同时慢慢建立属于自己的安全感和处理难题的方法，童心和成熟可以同时拥有。</p>
+                `
+            },
+            en: {
+                title: "Mental Age Test",
+                startDesc: "Answer 30 questions to explore your inner maturity",
+                labelRealAge: "Enter your real age",
+                btnStart: "Start Test",
+                tipDisclaimer: "Note: This test is for fun only and cannot replace professional psychological assessment.",
+                labelQNo: "Question",
+                btnPrev: "Prev",
+                btnNext: "Next",
+                resultHead: "Your Result",
+                labelMentalAge: "Mental Age",
+                analysisHead: "Detailed Analysis",
+                shareTip: "Share your result",
+                btnCopy: "Copy",
+                copyOk: "Link copied!",
+                btnReset: "Restart Test",
+                alertAge: "Please enter a valid age between 10 and 90",
+                alertSelectOpt: "Please select an option",
+                diffMature: "Your mental age is {n} years older than your real age",
+                diffSame: "Your mental age is close to your real age, difference: {n}",
+                diffYoung: "Your mental age is {n} years younger than your real age",
+                anaMature: `
+                    <p>✅ Your mental maturity is higher than most peers. You are emotionally stable and rarely driven by impulse or outside judgment. You accept changes, conflicts and separations well, and tend to think long-term with less overthinking.</p>
+                    <p>✅ Strengths: Great empathy, self-control and boundaries. You make rational decisions and people often trust you with their troubles.</p>
+                    <p>⚠️ Watch out: You may hide vulnerability and carry stress alone. It’s okay to be childish and relax sometimes; you don’t have to be mature all the time.</p>
+                    <p>💡 Tip: Keep some childlike wonder, it will make your heart softer and balanced.</p>
+                `,
+                anaSame: `
+                    <p>✅ Your mental state matches your physical age well. You keep curiosity and energy while having basic self-control and sense of responsibility.</p>
+                    <p>✅ Strengths: You get along well with people of all ages. You can enjoy fun and stay calm when trouble comes. Neither too precocious nor too naive.</p>
+                    <p>⚠️ Watch out: Mood swings are normal. Feeling anxious or sad after setbacks is healthy.</p>
+                    <p>💡 Tip: Keep reflecting on your emotions to build inner stability gradually.</p>
+                `,
+                anaYoung: `
+                    <p>✅ You keep a strong youthful heart. Curious and hopeful, you hate dull routines. Small interesting things can easily cheer you up.</p>
+                    <p>✅ Strengths: Rich imagination and sensitivity. You are sincere and simple, easy to get along with.</p>
+                    <p>⚠️ Watch out: You may escape or get emotional facing long-term pressure and conflicts. Self-doubt can appear after failures.</p>
+                    <p>💡 Tip: Keep your precious inner child while learning to build security and problem-solving skills. Maturity and childlike heart can coexist.</p>
+                `
+            }
+        };
+
+        // 双语题目
+        const questionList = [
+            {
+                q: {zh:"遇到计划被突然打乱，你的第一反应是？", en:"When your plan is suddenly disrupted, how do you react?"},
+                o: [
+                    {zh:"烦躁不安，很难平复", en:"Annoyed and hard to calm down"},
+                    {zh:"有点不快，但很快调整", en:"A little upset but adjust quickly"},
+                    {zh:"顺其自然，灵活应变", en:"Go with the flow and adapt flexibly"},
+                    {zh:"觉得新鲜，期待变化", en:"Feel excited and welcome the change"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"看待新鲜事物（新潮流、新观点），你通常？", en:"How do you usually view new trends and ideas?"},
+                o: [
+                    {zh:"本能排斥，不感兴趣", en:"Reject instinctively, not interested"},
+                    {zh:"观望，不主动接触", en:"Watch from a distance, no initiative"},
+                    {zh:"愿意了解，理性判断", en:"Willing to learn and judge rationally"},
+                    {zh:"乐于尝试拥抱", en:"Enjoy trying and embrace novelty"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"别人对你提出批评时，你会？", en:"When someone criticizes you?"},
+                o: [
+                    {zh:"立刻反驳，心里生气很久", en:"Defend at once and stay angry long"},
+                    {zh:"有点委屈，事后慢慢消化", en:"Feel wronged and process slowly"},
+                    {zh:"冷静倾听，区分对错", en:"Listen calmly and tell right from wrong"},
+                    {zh:"感谢对方，主动反思", en:"Thank them and reflect actively"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"独处的时候，你更多感受是？", en:"How do you feel when you are alone?"},
+                o: [
+                    {zh:"孤单寂寞，想找人陪伴", en:"Lonely and want company"},
+                    {zh:"偶尔无聊，刷手机打发", en:"Sometimes bored, scroll phone"},
+                    {zh:"平静放松，享受安静", en:"Calm and relaxed, enjoy quietness"},
+                    {zh:"充实自在，用来思考", en:"Fulfilled and use time for thinking"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"做重要决定，你习惯？", en:"How do you make important decisions?"},
+                o: [
+                    {zh:"凭直觉冲动选择", en:"Choose impulsively by gut feeling"},
+                    {zh:"纠结很久，容易受别人影响", en:"Hesitate long and easily influenced"},
+                    {zh:"权衡利弊后快速定夺", en:"Weigh pros and cons then decide quickly"},
+                    {zh:"长远考量，接受选择的代价", en:"Think long-term and accept consequences"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"面对失败，你的心态接近？", en:"Your attitude toward failure?"},
+                o: [
+                    {zh:"打击很大，自我否定", en:"Hurt deeply and deny yourself"},
+                    {zh:"难过一阵子，慢慢放下", en:"Sad for a while then let go slowly"},
+                    {zh:"当成经验，复盘改进", en:"Treat it as experience and improve"},
+                    {zh:"接纳失败，不内耗", en:"Accept failure without overthinking"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"和他人产生矛盾，你倾向？", en:"When conflicts arise with others?"},
+                o: [
+                    {zh:"冷战或者争吵", en:"Fight or give silent treatment"},
+                    {zh:"逃避，不想正面沟通", en:"Avoid and refuse direct talk"},
+                    {zh:"理性沟通解决问题", en:"Communicate rationally to solve it"},
+                    {zh:"换位思考，主动和解", en:"Empathize and reconcile actively"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"对于未来，你的感受？", en:"How do you feel about the future?"},
+                o: [
+                    {zh:"焦虑迷茫，充满担忧", en:"Anxious, confused and worried"},
+                    {zh:"走一步看一步，不太想", en:"Take it day by day, rarely think ahead"},
+                    {zh:"有简单目标稳步前进", en:"Have simple goals and move steadily"},
+                    {zh:"对未来有规划，内心笃定", en:"Have plans and feel steady inside"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"消费购物时，你一般？", en:"Your shopping habit?"},
+                o: [
+                    {zh:"喜欢就买，冲动消费", en:"Buy on impulse if you like it"},
+                    {zh:"容易被种草，经常后悔", en:"Easily influenced and often regret"},
+                    {zh:"按需购买，克制欲望", en:"Buy only what you need, control desire"},
+                    {zh:"清楚需求，不为情绪买单", en:"Know needs and avoid emotional shopping"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"被人误解的时候，你会？", en:"When you are misunderstood?"},
+                o: [
+                    {zh:"拼命解释，急于证明自己", en:"Rush to explain and prove yourself"},
+                    {zh:"心里委屈，等待对方理解", en:"Feel wronged and wait for understanding"},
+                    {zh:"适当解释，不强求认同", en:"Explain properly without forcing agreement"},
+                    {zh:"理解人与人差异，不必强求懂你", en:"Accept differences; no need to be understood"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"每天的生活节奏，你更偏向？", en:"Your daily rhythm?"},
+                o: [
+                    {zh:"混乱拖延，经常赶deadline", en:"Messy and procrastinate until deadline"},
+                    {zh:"偶尔拖延，压力来了才行动", en:"Procrastinate sometimes, act under pressure"},
+                    {zh:"规律安排，按时完成", en:"Arrange regularly and finish on time"},
+                    {zh:"主动管理节奏，预留缓冲空间", en:"Manage schedule and leave buffer time"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"看到别人过得很好，你容易？", en:"When you see others doing well?"},
+                o: [
+                    {zh:"嫉妒，心里不平衡", en:"Jealous and unbalanced"},
+                    {zh:"羡慕，偶尔自我怀疑", en:"Admire and doubt yourself sometimes"},
+                    {zh:"祝福对方，专注自己", en:"Bless them and focus on yourself"},
+                    {zh:"明白每个人赛道不同，互不比较", en:"Know everyone has a different path, no comparison"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"压力大的时候，你的解压方式？", en:"How do you release stress?"},
+                o: [
+                    {zh:"暴饮暴食或者熬夜发泄", en:"Overeat or stay up late to vent"},
+                    {zh:"刷短视频麻痹自己", en:"Scroll short videos to numb yourself"},
+                    {zh:"运动、听歌稳定情绪", en:"Exercise or listen to music to calm down"},
+                    {zh:"静下心梳理压力源头", en:"Calm down and find the source of stress"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"对于承诺，你的态度？", en:"Your attitude toward promises?"},
+                o: [
+                    {zh:"随口答应，容易忘记", en:"Agree casually and forget easily"},
+                    {zh:"尽力做到，实在不行就放弃", en:"Try best but give up if hard"},
+                    {zh:"谨慎许诺，努力兑现", en:"Promise carefully and keep it"},
+                    {zh:"不轻许诺，一诺必守", en:"Rarely promise, but keep every promise"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"学习陌生技能，你？", en:"When learning new skills?"},
+                o: [
+                    {zh:"害怕困难，直接放弃", en:"Fear difficulty and give up directly"},
+                    {zh:"试一下，难了就停下", en:"Try once then stop if hard"},
+                    {zh:"坚持练习，慢慢掌握", en:"Keep practicing and master gradually"},
+                    {zh:"享受学习过程，不怕笨拙", en:"Enjoy learning and don’t fear clumsiness"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"别人向你倾诉负面情绪，你？", en:"When others pour negative feelings to you?"},
+                o: [
+                    {zh:"觉得很烦，想躲开", en:"Feel annoyed and want to escape"},
+                    {zh:"不知道怎么回应，尴尬", en:"Awkward and don’t know how to reply"},
+                    {zh:"耐心倾听，适当安慰", en:"Listen patiently and comfort properly"},
+                    {zh:"共情对方，陪伴为主不评判", en:"Empathize, accompany without judging"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"回忆过去，你常常？", en:"How often do you look back on the past?"},
+                o: [
+                    {zh:"沉溺遗憾，反复回想伤痛", en:"Drown in regret and replay pain"},
+                    {zh:"怀念美好的旧时光", en:"Miss the good old days"},
+                    {zh:"偶尔回望，不驻足停留", en:"Look back sometimes but don’t linger"},
+                    {zh:"过去皆为经历，向前看", en:"Past is experience, keep moving forward"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"规则和约束，你的看法？", en:"Your opinion on rules and limits?"},
+                o: [
+                    {zh:"讨厌束缚，总想突破", en:"Hate restriction and want to break free"},
+                    {zh:"能躲就躲，看情况", en:"Avoid them when possible"},
+                    {zh:"遵守合理规则", en:"Follow reasonable rules"},
+                    {zh:"理解规则的意义，自律大于他律", en:"Understand purpose; self-discipline matters more"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"遇到不公平的事，你？", en:"Facing unfair things?"},
+                o: [
+                    {zh:"愤怒激动，想要对抗", en:"Angry and want to fight"},
+                    {zh:"无奈吐槽，无能为力", en:"Complain helplessly with no power"},
+                    {zh:"力所能及维护公平", en:"Defend fairness within your ability"},
+                    {zh:"看清现实，分清可控与不可控", en:"See reality and separate controllable & uncontrollable"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"你对新鲜感的需求？", en:"Your need for novelty?"},
+                o: [
+                    {zh:"非常依赖，受不了一成不变", en:"Highly dependent, hate routine"},
+                    {zh:"喜欢新鲜感，容易厌倦", en:"Love new things and get bored easily"},
+                    {zh:"可以接受稳定，偶尔需要变化", en:"Accept stability and want changes sometimes"},
+                    {zh:"稳定让你安心，变化随缘", en:"Stability comforts you; changes come naturally"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"评价自己，你更容易？", en:"How do you evaluate yourself?"},
+                o: [
+                    {zh:"极端否定自己", en:"Negate yourself extremely"},
+                    {zh:"忽高忽低，看心情", en:"Self-view swings with mood"},
+                    {zh:"客观看待优缺点", en:"See strengths and weaknesses objectively"},
+                    {zh:"接纳全部的自己，包括缺点", en:"Accept all of yourself including flaws"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"亲友对你有期待，你会？", en:"When family/friends have expectations for you?"},
+                o: [
+                    {zh:"害怕达不到，压力巨大", en:"Afraid to fail and feel huge pressure"},
+                    {zh:"尽量满足，委屈自己", en:"Try to satisfy them and wrong yourself"},
+                    {zh:"沟通边界，平衡期待和自我", en:"Set boundaries and balance expectation and self"},
+                    {zh:"清楚自己方向，温柔而坚定拒绝绑架", en:"Know your path and refuse pressure gently but firmly"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"空闲时间，你更愿意？", en:"What do you prefer in free time?"},
+                o: [
+                    {zh:"一直找人陪伴热闹", en:"Stay with people and keep lively"},
+                    {zh:"被动刷内容消磨时间", en:"Passively scroll to kill time"},
+                    {zh:"兼顾社交与独处", en:"Balance social time and alone time"},
+                    {zh:"自主安排，充实内心世界", en:"Plan freely and enrich inner world"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"一件事做不好，你会归因为？", en:"When you fail at something?"},
+                o: [
+                    {zh:"我本身不行，天赋问题", en:"I’m not good enough, lack talent"},
+                    {zh:"运气不好或者别人拖累", en:"Bad luck or others drag you down"},
+                    {zh:"方法不对，可以调整", en:"Wrong method and can adjust"},
+                    {zh:"成败都有多重因素，不单一归因", en:"Many factors lead to results, not one reason"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"面对离别，你的感受？", en:"Your feeling about parting?"},
+                o: [
+                    {zh:"崩溃难过很久走不出来", en:"Break down and take long to recover"},
+                    {zh:"伤感一段时间", en:"Sad for a period of time"},
+                    {zh:"伤感但明白聚散无常", en:"Sad but know gatherings end eventually"},
+                    {zh:"珍惜相遇，平静接纳告别", en:"Cherish meeting and accept farewell calmly"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"在群体里，你更在意？", en:"What matters most to you in a group?"},
+                o: [
+                    {zh:"所有人都喜欢我", en:"Everyone likes me"},
+                    {zh:"不被讨厌，融入大家", en:"Not disliked and fit in"},
+                    {zh:"舒服相处，不必讨好所有人", en:"Feel comfortable, no need to please everyone"},
+                    {zh:"坚守自我，吸引同频的人", en:"Be yourself and attract like-minded people"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"如果可以，你是否愿意改变自己？", en:"Would you like to change yourself?"},
+                o: [
+                    {zh:"想彻底变成另一个人", en:"Want to become a totally different person"},
+                    {zh:"想改掉所有缺点", en:"Want to fix all weaknesses"},
+                    {zh:"选择性优化不足", en:"Improve weaknesses selectively"},
+                    {zh:"愿意成长，但不否定本我", en:"Willing to grow without denying who you are"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"对于金钱，你的观念是？", en:"Your view on money?"},
+                o: [
+                    {zh:"金钱能解决一切烦恼", en:"Money solves all troubles"},
+                    {zh:"赚钱优先，牺牲感受", en:"Money first, sacrifice feelings"},
+                    {zh:"理性储蓄，量力消费", en:"Save rationally and spend within means"},
+                    {zh:"金钱是工具，不是幸福标尺", en:"Money is a tool, not the measure of happiness"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"突发紧急状况时，你？", en:"How do you handle emergencies?"},
+                o: [
+                    {zh:"慌乱紧张，大脑空白", en:"Panic and blank mind"},
+                    {zh:"紧张，但勉强行动", en:"Nervous but manage to act"},
+                    {zh:"稳住情绪，优先抓重点", en:"Calm down and focus on key points"},
+                    {zh:"冷静分析，有序处理危机", en:"Analyze calmly and handle step by step"}
+                ],
+                s: [0,2,4,6]
+            },
+            {
+                q: {zh:"人生的遗憾，你怎么看待？", en:"How do you view regrets in life?"},
+                o: [
+                    {zh:"遗憾是一辈子的枷锁", en:"Regret chains you for life"},
+                    {zh:"常常幻想如果重来", en:"Often imagine starting over"},
+                    {zh:"遗憾是常态，学会放下", en:"Regret is normal, learn to let go"},
+                    {zh:"遗憾塑造现在的你，坦然接纳", en:"Regret shapes you; accept peacefully"}
+                ],
+                s: [0,2,4,6]
+            }
+        ];
+
+        let lang = "zh";
+        let currentIndex = 0;
+        let answerArr = Array(questionList.length).fill(null);
+        let realAgeVal = 0;
+        let totalScoreCache = 0;
+
+        // 切换语言
+        function switchLang(){
+            lang = document.getElementById("langSelect").value;
+            renderI18n();
+            if(!document.getElementById("page-start").classList.contains("hidden")) return;
+            if(!document.getElementById("page-questions").classList.contains("hidden")){
+                renderQuestion();
+            }else{
+                calcResultByCache();
+            }
+        }
+        function renderI18n(){
+            document.querySelectorAll("[data-i18n]").forEach(el=>{
+                const k = el.getAttribute("data-i18n");
+                if(i18n[lang][k]) el.innerText = i18n[lang][k];
+            })
+        }
+
+        function showPage(id) {
+            document.querySelectorAll("#page-start,#page-questions,#page-result").forEach(el=>el.classList.add("hidden"));
+            document.getElementById(id).classList.remove("hidden");
+        }
+
+        function startTest(){
+            const val = Number(document.getElementById("realAge").value);
+            if(!val || val<10 || val>90){
+                alert(i18n[lang].alertAge);
+                return;
+            }
+            realAgeVal = val;
+            currentIndex = 0;
+            renderQuestion();
+            showPage("page-questions");
+        }
+
+        function renderQuestion(){
+            const item = questionList[currentIndex];
+            document.getElementById("currentNo").innerText = currentIndex+1;
+            document.getElementById("questionTitle").innerText = item.q[lang];
+            const box = document.getElementById("optionBox");
+            box.innerHTML = "";
+            item.o.forEach((opt,idx)=>{
+                const div = document.createElement("div");
+                div.className = "option-item rounded-lg border border-secondary/30 px-4 py-3 cursor-pointer";
+                if(answerArr[currentIndex] === idx) div.classList.add("active");
+                div.innerText = opt[lang];
+                div.onclick = ()=>{
+                    answerArr[currentIndex] = idx;
+                    renderQuestion();
+                }
+                box.appendChild(div);
+            })
+            const pct = ((currentIndex+1)/30)*100;
+            document.getElementById("progressBar").style.width = pct+"%";
+            document.getElementById("btnPrev").style.visibility = currentIndex===0 ? "hidden" : "visible";
+        }
+
+        function prevQuestion(){
+            if(currentIndex>0){
+                currentIndex--;
+                renderQuestion();
+            }
+        }
+        function nextQuestion(){
+            if(answerArr[currentIndex] === null){
+                alert(i18n[lang].alertSelectOpt);
+                return;
+            }
+            if(currentIndex < questionList.length -1){
+                currentIndex++;
+                renderQuestion();
+            }else{
+                calcResult();
+            }
+        }
+
+        function calcResult(){
+            let totalScore = 0;
+            for(let i=0;i<30;i++){
+                const s = questionList[i].s[answerArr[i]];
+                totalScore += s;
+            }
+            totalScoreCache = totalScore;
+            renderResult(totalScore, realAgeVal);
+            // 生成分享链接，hash参数 #s=分数&a=年龄
+            const shareUrl = location.origin + location.pathname + `#s=${totalScore}&a=${realAgeVal}`;
+            document.getElementById("shareLink").value = shareUrl;
+        }
+        function calcResultByCache(){
+            renderResult(totalScoreCache, realAgeVal);
+        }
+
+        function renderResult(totalScore, ra){
+            const mentalAge = Math.round(12 + (totalScore / 180) * (75 - 12));
+            const diff = mentalAge - ra;
+            document.getElementById("mentalAgeResult").innerText = mentalAge;
+
+            let diffHtml = "";
+            let analysisHtml = "";
+            if(diff >= 8){
+                diffHtml = `<p class="text-secondary">${i18n[lang].diffMature.replace("{n}", diff)}</p>`;
+                analysisHtml = i18n[lang].anaMature;
+            }else if(diff >= -7 && diff <=7){
+                diffHtml = `<p class="text-secondary">${i18n[lang].diffSame.replace("{n}", diff)}</p>`;
+                analysisHtml = i18n[lang].anaSame;
+            }else{
+                diffHtml = `<p class="text-secondary">${i18n[lang].diffYoung.replace("{n}", Math.abs(diff))}</p>`;
+                analysisHtml = i18n[lang].anaYoung;
+            }
+            document.getElementById("diffInfo").innerHTML = diffHtml;
+            document.getElementById("analysisText").innerHTML = analysisHtml;
+            showPage("page-result");
+        }
+
+        async function copyShareLink(){
+            const input = document.getElementById("shareLink");
+            try{
+                await navigator.clipboard.writeText(input.value);
+                document.getElementById("copySuccess").classList.remove("hidden");
+                setTimeout(()=>document.getElementById("copySuccess").classList.add("hidden"),2000);
+            }catch(e){
+                input.select();
+            }
+        }
+
+        function resetAll(){
+            answerArr = Array(questionList.length).fill(null);
+            currentIndex = 0;
+            document.getElementById("realAge").value = "";
+            history.pushState("", document.title, location.pathname);
+            showPage("page-start");
+        }
+
+        // 页面加载：检测分享hash链接
+        window.onload = function(){
+            renderI18n();
+            const hash = location.hash.slice(1);
+            if(hash){
+                const params = new URLSearchParams(hash);
+                const s = params.get("s");
+                const a = params.get("a");
+                if(s && a){
+                    totalScoreCache = Number(s);
+                    realAgeVal = Number(a);
+                    calcResultByCache();
+                    const shareUrl = location.origin + location.pathname + `#s=${s}&a=${a}`;
+                    document.getElementById("shareLink").value = shareUrl;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
